@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 
-// Datos iniciales de tareas.
-// 👀 Miren con atención: una de estas tareas es distinta a las demás...
+// CORRECCIÓN BUG 1: Se agregó la propiedad 'categoria' a la tarea 4
 const tareasIniciales = [
   { id: 1, texto: 'Aprender React', categoria: 'estudio', completada: false },
   { id: 2, texto: 'Hacer ejercicio', categoria: 'salud', completada: true },
   { id: 3, texto: 'Leer un libro', categoria: 'ocio', completada: false },
-  { id: 4, texto: 'Practicar debugging', completada: false },
+  { id: 4, texto: 'Practicar debugging', categoria: 'general', completada: false },
 ];
 
 function App() {
@@ -15,38 +14,28 @@ function App() {
   const [filtro, setFiltro] = useState('todas');
   const [contador, setContador] = useState(0);
 
-  // 🐛 BUG 2 — useEffect SIN arreglo de dependencias.
-  // Este efecto se ejecuta después de CADA render, y como adentro
-  // llamamos a setContador, provocamos otro render... y otro... y otro.
-  // Pista: abran la consola y cuenten cuántas veces se imprime esto.
+  // CORRECCIÓN BUG 2: Se agregó el arreglo de dependencias [] para evitar el bucle infinito
   useEffect(() => {
     console.log('Renderizando App, contador:', contador);
-    setContador(contador + 1);
-  });
+  }, []); 
 
-  // Filtra las tareas según el botón elegido
   const tareasFiltradas = tareas.filter((tarea) => {
     if (filtro === 'todas') return true;
-    // 🐛 BUG 3 — 'completada' es un booleano (true/false),
-    // pero acá se compara contra el STRING "true"/"false".
-    // Agreguen un console.log(typeof tarea.completada, tarea.completada)
-    // para ver qué tipo de dato es en realidad.
-    if (filtro === 'completadas') return tarea.completada === 'true';
-    if (filtro === 'pendientes') return tarea.completada === 'false';
+    
+    // CORRECCIÓN BUG 3: Se compara contra booleanos (true/false) en lugar de strings ("true"/"false")
+    if (filtro === 'completadas') return tarea.completada === true;
+    if (filtro === 'pendientes') return tarea.completada === false;
+    
     return true;
   });
 
   // Agrega una tarea nueva a la lista
   function agregarTarea(texto) {
     if (!texto.trim()) return;
-    // 🐛 BUG 4 — Se está MUTANDO el arreglo original con push()
-    // en vez de crear uno nuevo. React compara referencias, así que
-    // no detecta el cambio y la lista no se actualiza en pantalla.
-    // Prueben: console.log('tareas antes:', tareas.length) aquí arriba
-    // y otra vez después del push, van a ver que sí cambia el arreglo...
-    // pero la interfaz no se entera.
-    tareas.push({ id: Date.now(), texto, categoria: 'general', completada: false });
-    setTareas(tareas);
+    
+    // CORRECCIÓN BUG 4: Se usa el operador spread [...] para crear un nuevo arreglo en lugar de .push()
+    const nuevaTarea = { id: Date.now(), texto, categoria: 'general', completada: false };
+    setTareas([...tareas, nuevaTarea]);
   }
 
   // Marca una tarea como completada
@@ -71,12 +60,8 @@ function App() {
         {tareasFiltradas.map((tarea) => (
           <li key={tarea.id} className={tarea.completada ? 'completada' : ''}>
             <span>{tarea.texto}</span>
-            {/* 🐛 BUG 1 — La tarea con id 4 no tiene la propiedad 'categoria',
-                así que tarea.categoria es undefined, y undefined.toUpperCase()
-                no existe: la app se rompe apenas carga.
-                Este es el primer error que van a ver: la pantalla se pone
-                en blanco (o roja) con un mensaje de error. Léanlo con calma. */}
-            <span className="categoria">{tarea.categoria.toUpperCase()}</span>
+            {/* Se usa ?. por seguridad adicional para evitar errores si la categoría no existe */}
+            <span className="categoria">{tarea.categoria?.toUpperCase()}</span>
             <button onClick={() => completarTarea(tarea.id)}>✔</button>
           </li>
         ))}
@@ -121,14 +106,16 @@ function PerfilUsuario() {
     const exito = Math.random() > 0.5;
 
     setTimeout(() => {
-      if (exito) {
-        setUsuario({ nombre: 'Estudiante React' });
-      } else {
-        // 🐛 BUG 5 — Se lanza un error pero nadie lo atrapa (no hay try/catch)
-        // y nadie usa console.error para avisar. El resultado: la pantalla
-        // se queda en "Cargando perfil..." para siempre y el único rastro
-        // del problema es un error en rojo en la consola que nadie mira.
-        throw new Error('No se pudo cargar el usuario');
+      // CORRECCIÓN BUG 5: Se envuelve en try/catch para capturar el error y evitar que la UI se quede congelada
+      try {
+        if (exito) {
+          setUsuario({ nombre: 'Estudiante React' });
+        } else {
+          throw new Error('No se pudo cargar el usuario');
+        }
+      } catch (error) {
+        console.error("Error capturado:", error.message);
+        setUsuario({ nombre: 'Invitado (Error de carga)' });
       }
     }, 1000);
   }
